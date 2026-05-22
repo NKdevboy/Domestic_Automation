@@ -1,0 +1,9 @@
+Motor starter node 
+MAC address
+78:1C:3C:8A:86:E7
+Static IP : 192.168.2.50
+
+Tank Node 
+MAC address
+78:1C:3C:8A:76:F1
+Static IP : 192.168.2.51

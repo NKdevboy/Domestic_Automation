@@ -26,7 +26,8 @@ extern int g_boreTankLevel;
 /* =========================================================
    Mettur Valve
 ========================================================= */
-extern bool g_metturValveStatus;
+extern u8 g_metturValveStatus;
+extern unsigned long g_metturValveStatusTime;
 
 /* =========================================================
    Mettur Tank

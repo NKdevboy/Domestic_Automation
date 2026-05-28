@@ -23,6 +23,9 @@ const char* WIFI_PASSWORD = "Srn12345";
 #define METTUR_TRIG_PIN   D5
 #define METTUR_ECHO_PIN   D6
 
+//#define METTUR_VALVE_PIN   LED_BUILTIN
+#define METTUR_VALVE_PIN   D7
+
 /* =====================================================
    Tank Heights
 ===================================================== */
@@ -110,6 +113,8 @@ void wifiConnect(void)
 /* =====================================================
    Setup
 ===================================================== */
+ESP8266WebServer server(80);
+
 
 void setup()
 {
@@ -121,7 +126,18 @@ void setup()
     pinMode(METTUR_TRIG_PIN, OUTPUT);
     pinMode(METTUR_ECHO_PIN, INPUT);
 
+    pinMode(METTUR_VALVE_PIN, OUTPUT);
+
     wifiConnect();
+
+    server.on("/valve/true",
+          handleValveCommandOpen);
+
+    server.on("/valve/false",
+          handleValveCommandClose);
+
+    server.begin();
+    digitalWrite(METTUR_VALVE_PIN,LOW);
 }
 
 /* =====================================================
@@ -184,8 +200,19 @@ void loop()
     /* =================================================
        Send Data
     ================================================= */
-
+    server.handleClient();
     sendTankData();
 
-    delay(5000);
+    delay(10);
+}
+
+void handleValveCommandOpen(void)
+{
+    digitalWrite(METTUR_VALVE_PIN,HIGH);
+    Serial.println("Value open");
+}
+void handleValveCommandClose(void)
+{
+    digitalWrite(METTUR_VALVE_PIN,LOW);
+    Serial.println("Value close");
 }

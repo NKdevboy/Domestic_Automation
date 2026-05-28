@@ -19,9 +19,9 @@ ESP8266WebServer server(80);
 
 /* ---------------- Supply Status ---------------- */
 
-float g_supplyVoltage = 230.0;
+float g_supplyVoltage = 255;
 
-float g_supplyCurrent = 5.2;
+float g_supplyCurrent = 255;
 
 /* ---------------- Bore Motor ---------------- */
 
@@ -35,7 +35,8 @@ float g_boreEmptyHeightCm = 0;
 
 /* ---------------- Mettur Valve ---------------- */
 
-bool g_metturValveStatus = false;
+u8 g_metturValveStatus = 255;
+unsigned long g_metturValveStatusTime = 0;
 
 /* ---------------- Mettur Tank ---------------- */
 
@@ -80,10 +81,25 @@ String createHTMLPage(void)
         ? "STARTED"
         : "STOPPED";
 
-    String valveStatus =
-        (g_metturValveStatus == true)
-        ? "OPEN"
-        : "CLOSED";
+    String valveStatus = "SNA";
+        if(g_metturValveStatus == 255u)
+        {
+            valveStatus = "SNA";
+        }
+        else if(g_metturValveStatus == 1u)
+        {
+            valveStatus = "OPENING";
+        }else if(g_metturValveStatus == 2u)
+        {
+            valveStatus = "CLOSING";
+        }else if(g_metturValveStatus == 3u)
+        {
+            valveStatus = "OPENED";
+        }else if(g_metturValveStatus == 4u)
+        {
+            valveStatus = "CLOSED";
+        }
+
 
     String autoOffStatus =
         (g_boreAutoOffEnabled == true)
@@ -534,10 +550,24 @@ void handleGetData(void)
         ? "STARTED"
         : "STOPPED";
 
-    String valveStatus =
-        (g_metturValveStatus == true)
-        ? "OPEN"
-        : "CLOSED";
+    String valveStatus = "SNA";
+        if(g_metturValveStatus == 255u)
+        {
+            valveStatus = "SNA";
+        }
+        else if(g_metturValveStatus == 1u)
+        {
+            valveStatus = "OPENING";
+        }else if(g_metturValveStatus == 2u)
+        {
+            valveStatus = "CLOSING";
+        }else if(g_metturValveStatus == 3u)
+        {
+            valveStatus = "OPENED";
+        }else if(g_metturValveStatus == 4u)
+        {
+            valveStatus = "CLOSED";
+        }
 
     String autoOffStatus =
         (g_boreAutoOffEnabled == true)
@@ -726,9 +756,13 @@ void handleBoreAutoOff(void)
 
 void handleValveOpen(void)
 {
-    onMetturValveOpen();
-
-    g_metturValveStatus = true;
+    
+    if(g_metturValveStatus == 4u)
+    {
+        g_metturValveStatus = 1u;
+        g_metturValveStatusTime = millis();
+        //onMetturValveOpen();
+    }
 
     server.sendHeader("Location", "/");
     server.send(303);
@@ -736,9 +770,13 @@ void handleValveOpen(void)
 
 void handleValveClose(void)
 {
-    onMetturValveClose();
-
-    g_metturValveStatus = false;
+    
+    if(g_metturValveStatus == 3u)
+    {
+        g_metturValveStatus = 2u;
+        g_metturValveStatusTime = millis();
+        //onMetturValveClose();
+    }
 
     server.sendHeader("Location", "/");
     server.send(303);
@@ -842,26 +880,3 @@ void webServerHandleClient(void)
     }
 }
 
-/* =========================================================
-   Callback Functions
-========================================================= */
-
-void onBoreMotorStart(void)
-{
-    Serial.println("Bore Motor START");
-}
-
-void onBoreMotorStop(void)
-{
-    Serial.println("Bore Motor STOP");
-}
-
-void onMetturValveOpen(void)
-{
-    Serial.println("Valve OPEN");
-}
-
-void onMetturValveClose(void)
-{
-    Serial.println("Valve CLOSE");
-}

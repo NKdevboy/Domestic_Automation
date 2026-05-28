@@ -1,7 +1,5 @@
 #include "wifi_tx.h"
 
-#include <ESP8266HTTPClient.h>
-#include <ESP8266WiFi.h>
 
 extern uint8_t g_borePercentage;
 extern float g_boreEmptyHeight;
@@ -38,11 +36,6 @@ void sendTankData(void)
            String(g_aliveCounter);
 
     http.begin(client, url);
-
-    int httpCode = http.GET();
-
-    Serial.print("HTTP Response : ");
-    Serial.println(httpCode);
-
+    http.GET();
     http.end();
 }

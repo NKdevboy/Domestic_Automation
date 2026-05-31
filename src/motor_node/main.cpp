@@ -48,7 +48,10 @@ void setup()
     Serial.println("Connecting to WiFi...");
     
     WiFi.mode(WIFI_STA);
+    WiFi.persistent(true);
+    WiFi.setAutoConnect(true);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.setSleep(false);
 
     /* Wait until connected */
     while (WiFi.status() != WL_CONNECTED)
@@ -78,10 +81,11 @@ void loop()
 
     webServerHandleClient();
 
+    
 
-
-
-    delay(10);
+    //Serial.println("WIFI RSSI");
+    //Serial.println(WiFi.RSSI());
+    yield();
 }
 
 static void VoltAmps_Updater(void)

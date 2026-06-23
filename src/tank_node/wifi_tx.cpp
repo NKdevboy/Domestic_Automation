@@ -1,13 +1,18 @@
 #include "wifi_tx.h"
 
 
-extern uint8_t g_borePercentage;
 extern float g_boreEmptyHeight;
 
-extern uint8_t g_metturPercentage;
 extern float g_metturEmptyHeight;
 
-extern uint8_t g_aliveCounter;
+extern uint8 g_valveStatus_u8;
+
+/* =====================================================
+   Alive Counter
+===================================================== */
+
+uint8_t g_aliveCounter = 0;
+
 
 WiFiClient client;
 
@@ -20,14 +25,8 @@ void sendTankData(void)
     url =
         "http://192.168.2.50/updateTankData?";
 
-    url += "borePercent=" +
-           String(g_borePercentage);
-
-    url += "&boreEmpty=" +
+    url += "boreEmpty=" +
            String(g_boreEmptyHeight);
-
-    url += "&metturPercent=" +
-           String(g_metturPercentage);
 
     url += "&metturEmpty=" +
            String(g_metturEmptyHeight);
@@ -35,7 +34,16 @@ void sendTankData(void)
     url += "&aliveCounter=" +
            String(g_aliveCounter);
 
+    url += "&ValueStatus=" +
+           String(g_valveStatus_u8);
+
     http.begin(client, url);
     http.GET();
     http.end();
+       
+    /* =================================================
+       Alive Counter Ring Logic
+    ================================================= */
+
+       g_aliveCounter =(g_aliveCounter + 1) % 15;
 }

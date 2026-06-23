@@ -7,3 +7,13 @@ Tank Node
 MAC address
 78:1C:3C:8A:76:F1
 Static IP : 192.168.2.51
+
+Motor starter 0.1 node
+MAC address
+8C:AA:B5:1B:65:CB
+Static IP : 192.168.2.52
+
+Tank 0.1 Node 
+MAC address
+50:02:91:4D:F2:2E
+Static IP : 192.168.2.53

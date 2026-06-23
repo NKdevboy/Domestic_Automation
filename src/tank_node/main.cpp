@@ -3,7 +3,6 @@
 #include <ESP8266WiFi.h>
 
 #include "ultrasonic.h"
-#include "tank_logic.h"
 #include "wifi_tx.h"
 
 /* =====================================================
@@ -26,60 +25,26 @@ const char* WIFI_PASSWORD = "Srn12345";
 //#define METTUR_VALVE_PIN   LED_BUILTIN
 #define METTUR_VALVE_PIN   D7
 
-/* =====================================================
-   Tank Heights
-===================================================== */
-
-#define BORE_TANK_HEIGHT_CM      162.56f
-
-#define METTUR_TANK_HEIGHT_CM    127.0f
+#define MVSTOP 0u
+#define MVSTART 1u
+#define MVRETRY 3u
 
 /* =====================================================
    Global Tank Data
 ===================================================== */
 
-uint8_t g_borePercentage = 0;
-
 float g_boreEmptyHeight = 0;
-
-uint8_t g_metturPercentage = 0;
 
 float g_metturEmptyHeight = 0;
 
-/* =====================================================
-   Alive Counter
-===================================================== */
 
-uint8_t g_aliveCounter = 0;
+unsigned long SendTankDataTimer =0;
+unsigned long ultrasonicTimer =0;
 
-/* =====================================================
-   Local Structures
-===================================================== */
+uint16 ultrasonicSampleData =0u;
 
-TankData_t boreTank;
+uint8 g_valveStatus_u8 = MVSTOP;
 
-TankData_t metturTank;
-
-/* =====================================================
-   Average Read Function
-===================================================== */
-
-float ultrasonicAverageRead(uint8_t trigPin,
-                            uint8_t echoPin)
-{
-    float total = 0;
-
-    for (uint8_t i = 0; i < 20; i++)
-    {
-        total +=
-            ultrasonicReadCm(trigPin,
-                              echoPin);
-
-        delay(50);
-    }
-
-    return (total / 20.0f);
-}
 
 /* =====================================================
    WiFi Connect
@@ -89,25 +54,33 @@ void wifiConnect(void)
 {
     WiFi.mode(WIFI_STA);
 
-    WiFi.begin(WIFI_SSID,
-               WIFI_PASSWORD);
+    WiFi.begin(WIFI_SSID,WIFI_PASSWORD);
+
+    WiFi.setAutoReconnect(true);
+
+    WiFi.persistent(true);
+
+    WiFi.setSleep(false);
+
+    Serial.println();
 
     Serial.print("Connecting");
 
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(500);
 
+    while(WiFi.status()!=WL_CONNECTED){
+
+        delay(500);
         Serial.print(".");
     }
 
     Serial.println();
 
-    Serial.println("WiFi Connected");
+    Serial.println("Connected");
 
     Serial.print("IP Address : ");
 
     Serial.println(WiFi.localIP());
+
 }
 
 /* =====================================================
@@ -127,13 +100,13 @@ void setup()
     pinMode(METTUR_ECHO_PIN, INPUT);
 
     pinMode(METTUR_VALVE_PIN, OUTPUT);
-
+    
     wifiConnect();
 
-    server.on("/valve/true",
+    server.on("/v/1",
           handleValveCommandOpen);
 
-    server.on("/valve/false",
+    server.on("/v/0",
           handleValveCommandClose);
 
     server.begin();
@@ -146,73 +119,59 @@ void setup()
 
 void loop()
 {
-    float boreDistance;
 
-    float metturDistance;
+    if((ultrasonicTimer==0)||((millis()-ultrasonicTimer)>200))
+    {
 
     /* =================================================
        Bore Tank
     ================================================= */
 
-    boreDistance =
-        ultrasonicAverageRead(
-            BORE_TRIG_PIN,
-            BORE_ECHO_PIN);
-
-    tankCalculate(
-        BORE_TANK_HEIGHT_CM,
-        boreDistance,
-        &boreTank);
-
-    g_borePercentage =
-        boreTank.percentage;
-
-    g_boreEmptyHeight =
-        boreTank.emptyHeightCm;
+        g_boreEmptyHeight += ultrasonicReadCm(BORE_TRIG_PIN,BORE_ECHO_PIN);
 
     /* =================================================
        Mettur Tank
     ================================================= */
 
-    metturDistance =
-        ultrasonicAverageRead(
-            METTUR_TRIG_PIN,
-            METTUR_ECHO_PIN);
+        g_metturEmptyHeight += ultrasonicReadCm(METTUR_TRIG_PIN,METTUR_ECHO_PIN);
+    
+        ultrasonicSampleData++;
+        ultrasonicTimer = millis();
 
-    tankCalculate(
-        METTUR_TANK_HEIGHT_CM,
-        metturDistance,
-        &metturTank);
-
-    g_metturPercentage =
-        metturTank.percentage;
-
-    g_metturEmptyHeight =
-        metturTank.emptyHeightCm;
-
-    /* =================================================
-       Alive Counter Ring Logic
-    ================================================= */
-
-    g_aliveCounter =
-        (g_aliveCounter + 1) % 15;
+    }
 
     /* =================================================
        Send Data
     ================================================= */
     server.handleClient();
-    sendTankData();
 
-    delay(10);
+    if((SendTankDataTimer == 0)||((millis()-SendTankDataTimer)>2000))
+    {
+        g_boreEmptyHeight /= ultrasonicSampleData;
+        g_metturEmptyHeight /= ultrasonicSampleData;
+
+        sendTankData();
+
+        ultrasonicSampleData =0;
+        g_boreEmptyHeight =0;
+        g_metturEmptyHeight=0;
+
+        SendTankDataTimer = millis();
+    }
+
+    yield();
 }
 
 void handleValveCommandOpen(void)
 {
     digitalWrite(METTUR_VALVE_PIN,HIGH);
+    g_valveStatus_u8 = MVSTART;
     Serial.println("Value open");
 }
+
 void handleValveCommandClose(void)
 {
     digitalWrite(METTUR_VALVE_PIN,LOW);
+    g_valveStatus_u8 = MVSTOP;
     Serial.println("Value close");
 }
